@@ -7,8 +7,6 @@ import (
   "github.com/spf13/cobra"
 )
 
-// todo: fix help, add version.
-
 var cfgFile string
 
 var rootCmd = &cobra.Command{
