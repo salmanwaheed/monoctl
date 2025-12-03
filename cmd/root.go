@@ -2,12 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
+	"github.com/salmanwaheed/monoctl/pkg/config"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var cfgFile string
@@ -23,36 +20,20 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
 }
 
 func init() {
 	// global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "$HOME/.config/monoctl/config.yml", "config file")
 
-	// config loader
-	cobra.OnInitialize(initConfig)
-}
-
-func initConfig() {
-	cfgFile = os.ExpandEnv(cfgFile)
-	cfgDir := filepath.Dir(cfgFile)
-
-	if err := os.MkdirAll(cfgDir, 0755); err != nil {
-		fmt.Println("CONFIG ERROR:", err)
-	}
-
-	viper.SetConfigFile(cfgFile)
-
-	viper.SetEnvPrefix("MONOCTL")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // 'db.host:"value"' to 'MONOCTL_DB_HOST="<value>"'
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err != nil {
-		// fmt.Printf("fatal error config file: %v\n", err)
-		fmt.Println("config missing, creating:", cfgFile)
-		viper.SafeWriteConfigAs(cfgFile)
-	}
-
-	fmt.Printf("Using config: %v\n", viper.ConfigFileUsed())
+	// runs once at initialization.
+	// Ideal for: loading config, reading environment variables, initializing libraries, etc.
+	cobra.OnInitialize(func() {
+		if err := config.Load(cfgFile, rootCmd.Use); err != nil {
+			fmt.Printf("error: %v\n", err)
+		}
+	})
 }
