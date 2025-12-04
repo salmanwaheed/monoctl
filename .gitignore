@@ -2,3 +2,4 @@ deprecated
 *.json
 *.y[a]ml
 *.toml
+bin/
