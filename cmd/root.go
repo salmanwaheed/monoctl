@@ -1,10 +1,10 @@
 package cmd
 
 import (
-  "fmt"
+	"fmt"
 
-  "github.com/salmanwaheed/monoctl/pkg/config"
-  "github.com/spf13/cobra"
+	"github.com/salmanwaheed/monoctl"
+	"github.com/spf13/cobra"
 )
 
 var cfgFile string
@@ -20,9 +20,7 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-  if err := rootCmd.Execute(); err != nil {
-    fmt.Printf("error: %v\n", err)
-  }
+  monoctl.CheckErr(rootCmd.Execute())
 }
 
 func init() {
@@ -32,7 +30,7 @@ func init() {
   // runs once at initialization.
   // Ideal for: loading config, reading environment variables, initializing libraries, etc.
   cobra.OnInitialize(func() {
-    if err := config.Load(cfgFile, rootCmd.Use); err != nil {
+    if err := monoctl.Load(cfgFile, rootCmd.Use); err != nil {
       fmt.Printf("error: %v\n", err)
     }
   })

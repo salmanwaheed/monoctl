@@ -1,4 +1,4 @@
-package config
+package monoctl
 
 import (
   "encoding/json"

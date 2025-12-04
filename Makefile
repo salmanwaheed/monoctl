@@ -1,9 +1,12 @@
 VERSION := $(shell git describe --tags --abbrev=0)
 COMMIT := $(shell git rev-parse --short HEAD)
 
-build:
+rm:
+	rm -rf ./bin
+
+build: rm
 	go build -ldflags " \
 		-w -s \
-		-X 'github.com/salmanwaheed/monoctl/cmd.VersionInfo.Version=$(VERSION)' \
-		-X 'github.com/salmanwaheed/monoctl/cmd.VersionInfo.Commit=$(COMMIT)'" \
-		-o ./bin/monoctl ./main.go
+		-X 'github.com/salmanwaheed/monoctl.BuildInfo.Version=$(VERSION)' \
+		-X 'github.com/salmanwaheed/monoctl.BuildInfo.Commit=$(COMMIT)'" \
+		-o ./bin/monoctl ./cmd/monoctl/main.go

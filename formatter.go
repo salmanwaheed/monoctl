@@ -1,14 +1,14 @@
-package formatter
+package monoctl
 
 import (
-  "encoding/json"
-  "fmt"
-  "os"
-  "strings"
-  "text/template"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+	"text/template"
 
-  "github.com/spf13/cobra"
-  "go.yaml.in/yaml/v3"
+	"github.com/spf13/cobra"
+	"go.yaml.in/yaml/v4"
 )
 
 // Args for format flag
@@ -21,7 +21,7 @@ type flag struct {
 }
 
 // default values
-var f = flag{
+var Formatter = flag{
   Name: "format",
   Value: "",
   Usage: `Format output using a custom template:
@@ -31,16 +31,12 @@ var f = flag{
 }
 
 // bind flag like: monoctl <command> --format
-func BindFlag(cmd *cobra.Command) { f.bindFlag(cmd) }
-
-func (f *flag) bindFlag(cmd *cobra.Command) {
+func (f *flag) BindFlag(cmd *cobra.Command) {
   cmd.Flags().StringVar(&f.Variable, f.Name, f.Value, f.Usage)
 }
 
-func Execute(cmd *cobra.Command, data any) error { return f.execute(cmd, data) }
-
 // output as json, yaml, or template
-func (f *flag) execute(cmd *cobra.Command, data any) error {
+func (f *flag) Execute(cmd *cobra.Command, data any) error {
   value := strings.ToLower(strings.TrimSpace(f.Variable))
 
   switch {
@@ -48,15 +44,15 @@ func (f *flag) execute(cmd *cobra.Command, data any) error {
       fmt.Printf("%+v\n", data)
 
     case strings.HasPrefix(value, "{{") && strings.HasSuffix(value, "}}"):
-      return Template("formatterTemplate", f.Variable, data)
+      return tmpl("formatterTemplate", f.Variable, data)
 
     case value == "json":
-      out, err := ToJsonString(data)
+      out, err := toJsonString(data)
       if err != nil { return err }
       fmt.Printf("%v\n", out)
 
     case value == "yaml":
-      out, err := ToYamlString(data)
+      out, err := toYamlString(data)
       if err != nil { return err }
       fmt.Printf("%v", out)
 
@@ -69,12 +65,12 @@ func (f *flag) execute(cmd *cobra.Command, data any) error {
 
 // bind functions to Go template
 var funcMap = template.FuncMap{
-  "json": ToJsonString,
-  "yaml": ToYamlString,
+  "json": toJsonString,
+  "yaml": toYamlString,
 }
 
 // render Go template with helpers
-func Template(name string, text string, data any) error {
+func tmpl(name string, text string, data any) error {
   t, err := template.New(name).Funcs(funcMap).Parse(text)
   if err != nil {
     return fmt.Errorf("template parse error: %v", err)
@@ -92,7 +88,7 @@ func Template(name string, text string, data any) error {
 }
 
 // convert value to JSON string
-func ToJsonString(v any) (string, error) {
+func toJsonString(v any) (string, error) {
   b, err := json.Marshal(v)
 
   if err != nil {
@@ -103,7 +99,7 @@ func ToJsonString(v any) (string, error) {
 }
 
 // convert value to YAML string
-func ToYamlString(v any) (string, error) {
+func toYamlString(v any) (string, error) {
   b, err := yaml.Marshal(v)
 
   if err != nil {

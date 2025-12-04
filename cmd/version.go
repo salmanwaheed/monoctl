@@ -1,38 +1,32 @@
 package cmd
 
 import (
-  "fmt"
+	"fmt"
 
-  "github.com/salmanwaheed/monoctl/pkg/formatter"
-  "github.com/spf13/cobra"
+	"github.com/salmanwaheed/monoctl"
+	"github.com/salmanwaheed/monoctl/internal/constants"
+	"github.com/spf13/cobra"
 )
-
-type VersionInfo struct {
-  Version string
-  Commit string
-  Repository string
-  Maintainer string
-}
 
 var verCmd = &cobra.Command{
   Use: "version",
   Short: fmt.Sprintf("version for %s", rootCmd.Root().Use),
   Args: cobra.ExactArgs(0),
   RunE: func(cmd *cobra.Command, args []string) error {
-    data := VersionInfo{
+    data := monoctl.BuildInfo{
       Version: "dev",
       Commit: "none",
-      Repository: "github.com/salmanwaheed/monoctl",
-      Maintainer: "Salman Waheed",
+      Repository: constants.Repository,
+      Maintainer: constants.Maintainer,
     }
 
-    return formatter.Execute(cmd, data)
+    return monoctl.Formatter.Execute(cmd, data)
   },
 }
 
 func init() {
   // list flags
-  formatter.BindFlag(verCmd)
+  monoctl.Formatter.BindFlag(verCmd)
 
   rootCmd.AddCommand(verCmd)
 }
