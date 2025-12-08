@@ -1,20 +1,50 @@
 package monoctl
 
 import (
-  "encoding/json"
   "fmt"
   "io/fs"
   "os"
   "path/filepath"
   "strings"
-  "text/template"
 
+  "github.com/spf13/cobra"
   "github.com/spf13/viper"
 )
 
+type Config struct {
+  EnvPrefix string // <PREFIX>_KEY, e.g., MONOCTL_DB_PORT=8080
+  DefaultFilePath string // auto generate default value: $HOME/<EnvPrefix>/config.yml
+
+  filePath string // points to a string variable
+}
+
+func (c *Config) expandFilePath(p string) string {
+  return os.ExpandEnv(p)
+}
+
+func (c *Config) defaultFilePath() string {
+  filePath := c.expandFilePath(c.DefaultFilePath)
+
+  if filePath == "" {
+    dir, _ := os.UserConfigDir()
+    return fmt.Sprintf("%s/%s/config.yml", dir, strings.ToLower(c.EnvPrefix))
+  }
+
+  return filePath
+}
+
+func (c *Config) BindConfigFlag(cmd *cobra.Command) {
+  cmd.PersistentFlags().StringVar(&c.filePath, "config", c.defaultFilePath(), "config file")
+}
+
 // load config
-func Load(path string, envPrefix string) error {
-  cfgFile := os.ExpandEnv(path)
+func (c *Config) Load() {
+  CheckErr(c.load())
+}
+
+// load config
+func (c *Config) load() error {
+  cfgFile := c.expandFilePath(c.filePath)
   cfgDir := filepath.Dir(cfgFile)
 
   if err := os.MkdirAll(cfgDir, 0755); err != nil {
@@ -23,7 +53,7 @@ func Load(path string, envPrefix string) error {
 
   viper.SetConfigFile(cfgFile)
 
-  viper.SetEnvPrefix(strings.ToUpper(envPrefix))
+  viper.SetEnvPrefix(strings.ToUpper(c.EnvPrefix))
   viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // 'db.host:"value"' to '<envPrefix>_DB_HOST="<value>"'
   viper.AutomaticEnv()
 
@@ -45,9 +75,15 @@ func Load(path string, envPrefix string) error {
   return nil
 }
 
+// get all config as map
+func (c *Config) getData() map[string]any {
+  return viper.AllSettings()
+}
+
 // print key value, error if missing
-func Get(key string) error {
-  if err := isSet(key); err != nil {
+func (c *Config) Get(cmd *cobra.Command, args []string) error {
+  key := args[0]
+  if err := c.isSet(key); err != nil {
     return err
   }
 
@@ -58,7 +94,10 @@ func Get(key string) error {
 }
 
 // set key and save to file
-func Set(key string, value any) error {
+func (c *Config) Set(cmd *cobra.Command, args []string) error {
+  key := args[0]
+  value := args[1]
+
   viper.Set(key, value)
 
   if err := viper.WriteConfig(); err != nil {
@@ -69,15 +108,17 @@ func Set(key string, value any) error {
 }
 
 // remove key from file
-func Unset(key string) error {
-  if err := isSet(key); err != nil {
+func (c *Config) Unset(cmd *cobra.Command, args []string) error {
+  key := args[0]
+
+  if err := c.isSet(key); err != nil {
     return err
   }
 
-  data := getData()
+  data := c.getData()
   path := strings.Split(key, ".")
   lastKey := strings.ToLower(path[len(path)-1])
-  deepestMap := deepSearch(data, path[0:len(path)-1])
+  deepestMap := c.deepSearch(data, path[0:len(path)-1])
 
   delete(deepestMap, lastKey)
 
@@ -94,65 +135,12 @@ func Unset(key string) error {
 }
 
 // show config (json or template)
-func List(f string) error {
-  format := strings.TrimSpace(f)
-  data := getData()
-
-  // --format json
-  if format == "json" {
-    fmt.Println(toJSON(data))
-
-  // --format '{{json .}}' or '{{.}}'
-  } else if strings.HasPrefix(format, "{{") && strings.HasSuffix(format, "}}") {
-    funcMaps := template.FuncMap{
-      "json": func(v ...any) string {
-        if len(v) == 0 {
-          return "Did you mean?: '{{json .}}'"
-        }
-
-        return toJSON(v[0])
-      },
-    }
-
-    tmpl := template.New("config").Funcs(funcMaps)
-
-    // format := strings.ReplaceAll(format, "{{", "{{json ") // auto load hack :D
-
-    t, err := tmpl.Parse(format)
-    if err != nil {
-      return fmt.Errorf("template parse error: %v", err)
-    }
-
-    if err := t.Execute(os.Stdout, data); err != nil {
-      return fmt.Errorf("template execution error: %v", err)
-    }
-
-    fmt.Println() // add newline after template output to remove '%'
-  } else {
-    return fmt.Errorf("unsupported format: %v", format)
-  }
-
-  return nil
-}
-
-// get all config as map
-func getData() map[string]any {
-  return viper.AllSettings()
-}
-
-// convert data to JSON string
-func toJSON(v any) string {
-  out, err := json.Marshal(v)
-
-  if err != nil {
-    return fmt.Sprintf("json encode error: %v", err)
-  }
-
-  return string(out)
+func (c *Config) List(cmd *cobra.Command, args []string) error {
+  return executeFormatFlag(cmd, c.getData())
 }
 
 // check if key exists anywhere in Viper (file, env, default, Set)
-func isSet(key string) error {
+func (c *Config) isSet(key string) error {
   key = strings.ToLower(key)
 
   if !viper.IsSet(key) {
@@ -163,7 +151,7 @@ func isSet(key string) error {
 }
 
 // get nested map at path, nil if missing
-func deepSearch(m map[string]any, path []string) map[string]any {
+func (c *Config) deepSearch(m map[string]any, path []string) map[string]any {
   for _, k := range path {
     m2, ok := m[k]
     if !ok {
