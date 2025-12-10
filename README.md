@@ -3,8 +3,11 @@
 just release first version for cron job.
 
 ```sh
-go run cmd/monoctl/main.go google sheet --sheet-id "xxx" --sheet-name Sheet1 --db-uri "xxxx" --gauth "xxxx" --date xxx --cat xxx
+# manual rows
+monoctl sheet --id xxx --tab-name xxx --auth service-account.json --rows '[["name","email","telephone"],["salman","salman@example.com","123456789"]]'
 
+# dynamic rows: get rows from database
+monoctl sheet --id xxx --tab-name xxx --auth ~/.ssh/google-service-account.json --data-source mongodb
 ```
 
 ## TODO
