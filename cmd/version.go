@@ -10,7 +10,7 @@ import (
 var (
   ver = &monoctl.BuildInfo{
     Version: "dev",
-    Commit: "nono",
+    Commit: "none",
     Repository: "github.com/salmanwaheed/monoctl",
     Maintainer: "Salman Waheed",
   }
