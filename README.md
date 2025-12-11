@@ -12,3 +12,6 @@ monoctl sheet --id xxx --tab-name xxx --auth ~/.ssh/google-service-account.json 
 
 ## TODO
 - Refactor code, flags, commands and etc.
+- Pass `--rows-file /path/data.json`.
+- Pass multiple `--row "name,email,telephone" --row "salman,salman@example.com,123456789"` flags.
+- Get rows from Databases (e.g., mariadb, mongodb).
