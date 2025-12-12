@@ -32,6 +32,7 @@ var (
   cfgListCmd = &cobra.Command{
     Use: "list",
     Short: "List a config values",
+    Args: cobra.ExactArgs(0),
     RunE: cfg.List,
   }
 )

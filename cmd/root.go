@@ -6,9 +6,7 @@ import (
 )
 
 var (
-  cfg = &monoctl.Config{
-    EnvPrefix: "monoctl",
-  }
+  cfg = &monoctl.Config{EnvPrefix: rootCmd.Name()}
 
   rootCmd = &cobra.Command{
     Use: "monoctl",
