@@ -36,7 +36,7 @@ type Sheet struct {
 
   ctx context.Context
   scopes []string
-  srv *sheets.Service
+  // srv *sheets.Service
 }
 
 func (s *Sheet) auth() (*sheets.Service, error) {
@@ -60,7 +60,7 @@ func (s *Sheet) auth() (*sheets.Service, error) {
     return nil, fmt.Errorf("unable to retrieve client: %v", err)
   }
 
-  s.srv = srv
+  // s.srv = srv
   return srv, nil
 }
 
