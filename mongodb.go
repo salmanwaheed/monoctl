@@ -3,158 +3,93 @@ package monoctl
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-  "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
-const timeout = 10 * time.Second
+type MongoDB struct {
+  Uri string
+  Collection string
+  Fields []string
+  QueryJSON string
 
-type dbConfig struct {
-	client *mongo.Client
-	uri    string
-	ctx    context.Context
+  ctx context.Context
+  timeout time.Duration
+  // client *mongo.Client
 }
 
-func NewDB(uri string) *dbConfig {
-	return &dbConfig{uri: uri}
+func (m *MongoDB) auth() (*mongo.Client, error) {
+  m.timeout = 10 * time.Second
+
+  ctx, cancel := context.WithTimeout(context.TODO(), m.timeout)
+  defer cancel()
+
+  client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.Uri))
+  if err != nil {
+    return nil, fmt.Errorf("unable to connect: %v", err)
+  }
+  // defer client.Disconnect(ctx)
+
+  if err := client.Ping(ctx, nil); err != nil {
+    return nil, fmt.Errorf("unable to ping: %v", err)
+  }
+
+  m.ctx = context.TODO()
+  return client, nil
 }
 
-func (c *dbConfig) Connect() error {
-	ctxBg := context.Background()
-	ctx, cancel := context.WithTimeout(ctxBg, timeout)
-	defer cancel()
+func (m *MongoDB) Find(out any) error {
+  client, err := m.auth()
+  if err != nil {
+    return err
+  }
+  defer client.Disconnect(m.ctx)
 
-	clientOptions := options.Client().ApplyURI(c.uri)
-	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		return fmt.Errorf("connect error: %w", err)
-	}
+  // parse projection
+  // projMap := bson.M{}
+  // var fieldsJSON string = `["name","email"]`
+  // var fields []string
+  // if err := json.Unmarshal([]byte(fieldsJSON), &fields); err != nil {
+  //   for _, f := range fields {
+  //     projMap[f] = 1
+  //   }
+  // }
 
-	if err := client.Ping(ctx, nil); err != nil {
-		return fmt.Errorf("ping error: %w", err)
-	}
+  opts := options.Find()
+  // opts.SetProjection(projMap)
+  opts.SetLimit(2)
+  opts.SetSort(bson.M{"dateCreated": -1})
 
-	c.client = client
-	c.ctx = ctxBg
+  // parse query
+  var query bson.M
+  bson.UnmarshalExtJSON([]byte(m.QueryJSON), true, &query)
 
-	log.Println("database is connected!")
-	return nil
+  cs, _ := connstring.ParseAndValidate(m.Uri)
+  cur, err := client.Database(cs.Database).Collection(m.Collection).Find(m.ctx, query, opts)
+  if err != nil {
+    return fmt.Errorf("unable to run query: %v", err)
+  }
+  defer cur.Close(m.ctx)
+
+  // var rawData []map[string]any
+  // if err := cur.All(m.ctx, &rawData); err != nil {
+  //   return fmt.Errorf("unable to decode cursor: %v", err)
+  // }
+  // fmt.Println(rawData)
+
+  return cur.All(m.ctx, out)
 }
 
-func (c *dbConfig) Disconnect() {
-	if c.client != nil {
-		_ = c.client.Disconnect(c.ctx)
-		log.Println("database is disconnected!")
-	}
-}
+func (m *MongoDB) GetRows() ([][]any, error) {
+  var rawData []map[string]any
 
-type collection struct {
-	col *mongo.Collection
-	ctx context.Context
-}
+  if err := m.Find(&rawData); err != nil {
+    return nil, err
+  }
 
-func (c *dbConfig) Collection(name string) *collection {
-	cs, _ := connstring.ParseAndValidate(c.uri)
-
-	return &collection{
-		col: c.client.Database(cs.Database).Collection(name),
-		ctx: c.ctx,
-	}
-}
-
-func (c *collection) Aggregate(pipeline mongo.Pipeline) (Documents, error) {
-	cursor, err := c.col.Aggregate(c.ctx, pipeline)
-	if err != nil {
-		return nil, fmt.Errorf("aggregate error: %w", err)
-	}
-	defer cursor.Close(c.ctx)
-
-	var results Documents
-	if err := cursor.All(c.ctx, &results); err != nil {
-		return nil, fmt.Errorf("cursor decode error: %w", err)
-	}
-
-	return results, nil
-}
-
-type Query struct {
-	Fields []string
-	Category string
-	DateCreated time.Time
-}
-
-func (q *Query) projection() bson.D {
-	proj := bson.D{{Key: "_id", Value: 1}}
-
-	for _, field := range q.Fields {
-		proj = append(proj, bson.E{Key: field, Value: 1})
-	}
-
-	return proj
-}
-
-func (q *Query) Pipeline() mongo.Pipeline {
-	return mongo.Pipeline{
-		{{Key: "$match", Value: bson.M{
-			"category": q.Category,
-			"dateCreated": bson.M{"$gte": q.DateCreated},
-		}}},
-		{{Key: "$group", Value: bson.M{
-			"_id": bson.M{"name": "$name", "email": "$email", "telephone": "$telephone"},
-			"doc": bson.M{"$first": "$$ROOT"},
-		}}},
-		{{Key: "$replaceRoot", Value: bson.M{"newRoot": "$doc"}}},
-		{{Key: "$project", Value: q.projection()}},
-		{{Key: "$sort", Value: bson.M{"dateCreated": -1}}},
-		// {{Key: "$limit", Value: 2}},
-	}
-}
-
-type Documents []map[string]any
-
-func formatValue(v any) string {
-	switch t := v.(type) {
-		case nil:
-			return ""
-		case primitive.DateTime:
-			return t.Time().Format("2006-01-02 15:04:05")
-		default:
-			return fmt.Sprintf("%v", v)
-	}
-}
-
-// Convert "[]map" to "[][]any" for google sheets
-func (docs Documents) ToRows(fields []string) [][]any {
-	var rows [][]any
-
-	for _, doc := range docs {
-		row := make([]any, len(fields))
-		for i, key := range fields {
-			row[i] = formatValue(doc[key])
-		}
-		rows = append(rows, row)
-	}
-
-	return rows
-}
-
-// Convert "[]map" to "[][]string" for CSV
-func (docs Documents) ToCSV(fields []string) [][]string {
-	var rows [][]string
-
-	for _, doc := range docs {
-		row := make([]string, len(fields))
-		for i, key := range fields {
-			row[i] = formatValue(doc[key])
-		}
-		rows = append(rows, row)
-	}
-
-	return rows
+  return mapToRows(m.Fields, rawData), nil
 }

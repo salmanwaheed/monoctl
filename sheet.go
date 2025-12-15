@@ -15,7 +15,11 @@ import (
 type rows [][]any
 
 func (r *rows) String() string {
-  b, _ := json.Marshal(r)
+  if r == nil || len(*r) == 0 {
+    return "[]"
+  }
+
+  b, _ := json.Marshal(*r)
   return string(b)
 }
 
@@ -29,6 +33,8 @@ func (r *rows) Type() string {
 
 type Sheet struct {
   AuthFile string
+  DataSource string
+  DryRun bool
 
   ID string
   TabName string
@@ -65,8 +71,30 @@ func (s *Sheet) auth() (*sheets.Service, error) {
 }
 
 func (s *Sheet) InsertRows(cmd *cobra.Command, args []string) error {
+  if s.DataSource == "mongodb" {
+    m := &MongoDB{
+      Uri: "xxxxxx",
+      Collection: "lead",
+      Fields: []string{"name", "email", "code", "telephone", "country", "nationality", "companyName", "salary", "category", "productTitle", "dateCreated", "lastUpdated"},
+      QueryJSON: `{"category":"credit-cards","dateCreated":{"$lte":ISODate("2025-12-13T08:09:06.553Z")}}`,
+    }
+
+    rows, err := m.GetRows()
+    if err != nil { return err }
+
+    str, err := toJson(rows)
+    if err != nil { return err }
+
+    s.Rows.Set(str)
+  }
+
   if len(s.Rows) == 0 {
     return fmt.Errorf("no rows to insert")
+  }
+
+  if s.DryRun {
+    fmt.Println(s.Rows.String())
+    return nil
   }
 
   srv, err := s.auth()

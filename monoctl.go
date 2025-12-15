@@ -28,6 +28,22 @@ func CheckErr(msg interface{}) {
   }
 }
 
+func mapToRows(fields []string, rawData []map[string]any) [][]any {
+  var rows [][]any
+
+  for _, rd := range rawData {
+    row := make([]any, len(fields))
+
+    for i, f := range fields {
+      row[i] = rd[f]
+    }
+
+    rows = append(rows, row)
+  }
+
+  return rows
+}
+
 // convert value to JSON string
 func toJson(v any) (string, error) {
   b, err := json.Marshal(v)

@@ -6,8 +6,6 @@ import (
 )
 
 var (
-  // sheetDataSource string // mongodb|mariadb
-
   sheet = &monoctl.Sheet{TabName: "Sheet1"}
 
   sheetCmd = &cobra.Command{
@@ -24,13 +22,14 @@ func init() {
   sheetCmd.Flags().StringVar(&sheet.ID, "id", "", "Google Sheet ID")
   sheetCmd.Flags().StringVar(&sheet.TabName, "tab-name", "", "Google Sheet tab name")
   sheetCmd.Flags().Var(&sheet.Rows, "rows", "Google Sheet rows as JSON array")
-  // sheetCmd.Flags().StringVar(&sheetDataSource, "data-source", "", "Get rows from database")
+  sheetCmd.Flags().StringVar(&sheet.DataSource, "data-source", "", "Get rows from database")
+  sheetCmd.Flags().BoolVar(&sheet.DryRun, "dry-run", false, "Print rows only")
 
   // // required flags
   sheetCmd.MarkFlagRequired("auth")
   sheetCmd.MarkFlagRequired("id")
   sheetCmd.MarkFlagRequired("tab-name")
-  // sheetCmd.MarkFlagsOneRequired("rows", "data-source")
+  sheetCmd.MarkFlagsOneRequired("rows", "data-source")
 
   rootCmd.AddCommand(sheetCmd)
 }
