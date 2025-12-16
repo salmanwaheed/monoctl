@@ -4,6 +4,7 @@ import (
   "encoding/json"
   "fmt"
   "os"
+  "path/filepath"
   "strings"
   "text/template"
 
@@ -28,6 +29,21 @@ func CheckErr(msg interface{}) {
   }
 }
 
+func configDir(paths ...string) (string, error) {
+  dir, err := os.UserConfigDir()
+  if err != nil {
+    return "", fmt.Errorf("unable to find config directory: %w", err)
+  }
+
+  paths = append([]string{dir, "monoctl"}, paths...)
+  path := filepath.Join(paths...)
+  if err := os.MkdirAll(path, 0700); err != nil {
+    return "", fmt.Errorf("cannot create config directory '%s': %w", path, err)
+  }
+
+  return path, nil
+}
+
 func mapToRows(fields []string, rawData []map[string]any) [][]any {
   var rows [][]any
 
@@ -49,7 +65,7 @@ func toJson(v any) (string, error) {
   b, err := json.Marshal(v)
 
   if err != nil {
-    return "", fmt.Errorf("json encode error: %v", err)
+    return "", fmt.Errorf("json encode error: %w", err)
   }
 
   return string(b), nil
@@ -60,7 +76,7 @@ func toYaml(v any) (string, error) {
   b, err := yaml.Marshal(v)
 
   if err != nil {
-    return "", fmt.Errorf("yaml encode error: %v", err)
+    return "", fmt.Errorf("yaml encode error: %w", err)
   }
 
   return string(b), nil
@@ -76,11 +92,11 @@ var funcMap = template.FuncMap{
 func tmpl(name string, text string, data any) error {
   t, err := template.New(name).Funcs(funcMap).Parse(text)
   if err != nil {
-    return fmt.Errorf("template parse error: %v", err)
+    return fmt.Errorf("template parse error: %w", err)
   }
 
   if err := t.Execute(os.Stdout, data); err != nil {
-    return fmt.Errorf("template execution error: %v", err)
+    return fmt.Errorf("template execution error: %w", err)
   }
 
   if !strings.Contains(text, "yaml") {

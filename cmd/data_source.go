@@ -1,0 +1,58 @@
+package cmd
+
+import (
+  "github.com/spf13/cobra"
+)
+
+var (
+  dsCmd = &cobra.Command{Use: "data-source", Short: "Manage reusable data sources"}
+
+  dsCreateCmd = &cobra.Command{
+    Use: "create <type>/<name>",
+    Short: "Create or Update a data source",
+    Args: cobra.ExactArgs(1),
+    RunE: ds.Create,
+  }
+
+  dsDeleteCmd = &cobra.Command{
+    Use: "delete <type>/<name>",
+    Short: "Delete a data source",
+    Args: cobra.ExactArgs(1),
+    RunE: ds.Delete,
+  }
+
+  dsViewCmd = &cobra.Command{
+    Use: "view <type>/<name>",
+    Short: "View a data source",
+    Args: cobra.ExactArgs(1),
+    RunE: ds.View,
+  }
+
+  dsListCmd = &cobra.Command{
+    Use: "list",
+    Short: "List all data sources",
+    Args: cobra.ExactArgs(0),
+    RunE: ds.List,
+  }
+)
+
+func init() {
+  // create flags
+  dsCreateCmd.Flags().StringVar(&ds.Uri, "uri", "", "Data source connection URI")
+  dsCreateCmd.Flags().StringVar(&ds.Table, "table", "", "Collection or table name")
+  dsCreateCmd.Flags().IntVar(&ds.Limit, "limit", -1, "Maximum number of records")
+  dsCreateCmd.Flags().StringSliceVar(&ds.Fields, "fields", []string{}, "Fields to fetch (ordered)")
+  dsCreateCmd.Flags().StringVar(&ds.Query, "query", "", "Query filter (JSON)")
+
+  // create flags required
+  dsCreateCmd.MarkFlagRequired("uri")
+  dsCreateCmd.MarkFlagRequired("table")
+  dsCreateCmd.MarkFlagRequired("fields")
+  dsCreateCmd.MarkFlagRequired("query")
+
+  // view flags
+  // dsViewCmd.Flags().BoolVar(&ds.DryRun, "dry-run", false, "Show results")
+
+  dsCmd.AddCommand(dsCreateCmd, dsDeleteCmd, dsViewCmd, dsListCmd)
+  rootCmd.AddCommand(dsCmd)
+}

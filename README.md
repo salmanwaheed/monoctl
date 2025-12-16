@@ -8,16 +8,14 @@ monoctl sheet --id xxx --tab-name xxx --auth service-account.json --rows '[["nam
 
 # dynamic rows: get rows from database
 monoctl sheet --id xxx --tab-name xxx --auth ~/.ssh/google-service-account.json --data-source mongodb
+
+# create data source
+monoctl data-source create mongodb/fetch-leads --uri xxx --table xxx --limit 2 --fields 'name,email,telephone' --query '{}'
 ```
 
 ## TODO
 - Refactor code, flags, commands and etc.
 - Pass `--rows-file /path/data.json`.
 - Pass multiple `--row "name,email,telephone" --row "salman,salman@example.com,123456789"` flags.
-- Get rows from Databases (e.g., mariadb, mongodb).
 - Use `monoctl help command`, and remove `monoctl --help`.
-- `monoctl data-source create <type>/<name> --uri xxx --collection xxx --limit 2 --fields 'f1,f2,...' --query '{"k1":"v1", ....}'`.
-- `monoctl data-source create <type>/<name> --uri xxx --collection xxx --limit 2 --fields 'f1,f2,...' --query-from ./query.json`.
-- `monoctl data-source delete <type>/<name>`.
 - `monoctl data-source view <type>/<name> --dry-run`.
-- `monoctl data-source list`.
