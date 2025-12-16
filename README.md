@@ -1,17 +1,52 @@
 # monoctl
 
-just release first version for cron job.
+monoctl is a Go based CLI tool to manage configuration, data sources, and Google Sheets integrations.
 
-```sh
-# manual rows
-monoctl sheet --id xxx --tab-name xxx --auth service-account.json --rows '[["name","email","telephone"],["salman","salman@example.com","123456789"]]'
+---
 
-# dynamic rows: get rows from database
-monoctl sheet --id xxx --tab-name xxx --auth ~/.ssh/google-service-account.json --data-source mongodb
+## Installation
 
-# create data source
-monoctl data-source create mongodb/fetch-leads --uri xxx --table xxx --limit 2 --fields 'name,email,telephone' --query '{}'
+Build from source:
+
+```bash
+# example: if you have go installed
+git clone https://github.com/salmanwaheed/monoctl.git
+cd monoctl
+make build
+
+# verify installation
+./bin/monoctl version
 ```
+
+---
+
+## Example Workflow
+
+1. Create a MongoDB data source:
+
+```bash
+monoctl data-source create mongodb/users --uri mongodb://localhost:27017/db --table users --limit 10 --fields 'name,email' --query '{"active":true}'
+```
+
+2. List all data sources:
+
+```bash
+monoctl data-source list
+```
+
+3. Push data from data source to a Google Sheet:
+
+```bash
+monoctl sheet --id 1LEh1... --tab-name Sheet1 --auth google-service-account.json --data-source mongodb/users
+```
+
+4. Append custom rows:
+
+```bash
+monoctl sheet --id 1LEh1... --tab-name Sheet1 --auth google-service-account.json --rows '[["name","email"],["Salman","salman@example.com"]]'
+```
+
+---
 
 ## TODO
 - Refactor code, flags, commands and etc.
