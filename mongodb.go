@@ -88,7 +88,7 @@ func (m *MongoDB) GetRows() ([][]any, error) {
   var rawData []map[string]any
 
   if err := m.Find(&rawData); err != nil {
-    return nil, err
+    return nil, fmt.Errorf("unable to decode cursor: %v", err)
   }
 
   return mapToRows(m.Fields, rawData), nil

@@ -16,8 +16,8 @@ monoctl sheet --id xxx --tab-name xxx --auth ~/.ssh/google-service-account.json 
 - Pass multiple `--row "name,email,telephone" --row "salman,salman@example.com,123456789"` flags.
 - Get rows from Databases (e.g., mariadb, mongodb).
 - Use `monoctl help command`, and remove `monoctl --help`.
-- `monoctl data-source create <type>/<name> --uri xxx --collection xxx --fields 'f1,f2,...' --query '{"k1":"v1", ....}'`.
-- `monoctl data-source create <type>/<name> --uri xxx --collection xxx --fields 'f1,f2,...' --query-from ./query.json`.
+- `monoctl data-source create <type>/<name> --uri xxx --collection xxx --limit 2 --fields 'f1,f2,...' --query '{"k1":"v1", ....}'`.
+- `monoctl data-source create <type>/<name> --uri xxx --collection xxx --limit 2 --fields 'f1,f2,...' --query-from ./query.json`.
 - `monoctl data-source delete <type>/<name>`.
 - `monoctl data-source view <type>/<name> --dry-run`.
 - `monoctl data-source list`.
