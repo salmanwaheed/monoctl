@@ -6,16 +6,24 @@ monoctl is a Go based CLI tool to manage configuration, data sources, and Google
 
 ## Installation
 
-Build from source:
-
+Build from source, if you have go installed:
 ```bash
-# example: if you have go installed
 git clone https://github.com/salmanwaheed/monoctl.git
+
 cd monoctl
 make build
 
 # verify installation
 ./bin/monoctl version
+```
+
+Install via Binary file:
+```bash
+sudo wget -O /usr/local/bin/monoctl https://github.com/salmanwaheed/monoctl/releases/download/v0.1/monoctl-linux-x86_64
+sudo chmod +x /usr/local/bin/monoctl
+
+# verify installation
+monoctl version
 ```
 
 ---
