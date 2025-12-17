@@ -243,6 +243,8 @@ Example:
 
 * Refactor commands, flags, and internal structure.
 * Load default command flag values from config.
+* Add Google Sheets integration with MariaDB as a data source.
+* Add Google Drive support for downloading and storing HTML pages.
 * Add `--query-from /path/to/query.json`.
 * Add `--rows-from /path/to/rows.json`.
 * Support multiple `--row` flags:
