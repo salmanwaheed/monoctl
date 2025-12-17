@@ -90,7 +90,8 @@ monoctl data-source create <type>/<name> \
   --table <collection> \
   --limit 10 \
   --fields 'f1,f2,...' \
-  --query '{"key":"value",...}'
+  --query '{"key":"value",...}' \
+  --overwrite # Update/Overwrite data source
 
 monoctl data-source delete <type>/<name>            # Delete a data source
 monoctl data-source view <type>/<name>              # View data source YAML

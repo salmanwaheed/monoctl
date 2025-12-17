@@ -46,6 +46,7 @@ func init() {
   dsCreateCmd.Flags().IntVar(&ds.Limit, "limit", -1, "Maximum number of records")
   dsCreateCmd.Flags().StringSliceVar(&ds.Fields, "fields", []string{}, "Fields to fetch (ordered)")
   dsCreateCmd.Flags().StringVar(&ds.Query, "query", "", "Query filter (JSON)")
+  dsCreateCmd.Flags().BoolVar(&ds.Overwrite, "overwrite", false, "Overwrite Query")
 
   // create flags required
   dsCreateCmd.MarkFlagRequired("uri")

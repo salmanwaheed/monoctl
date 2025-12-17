@@ -25,6 +25,7 @@ type DataSource struct {
   Limit     int       `yaml:"limit,omitempty"`
   Fields    []string  `yaml:"fields,omitempty"`
   Query     string    `yaml:"query,omitempty"`
+  Overwrite bool      `yaml:"-"`
   DryRun    bool      `yaml:"-"`
 }
 
@@ -102,8 +103,10 @@ func (ds *DataSource) Create(cmd *cobra.Command, args []string) error {
   }
 
   // avoid overwrite existing file silently
-  if _, err := os.Stat(path); err == nil {
-    return fmt.Errorf("data source '%s/%s' already exists", ds.Type, ds.Name)
+  if !ds.Overwrite {
+    if _, err := os.Stat(path); err == nil {
+      return fmt.Errorf("data source '%s/%s' already exists", ds.Type, ds.Name)
+    }
   }
 
   if err := os.WriteFile(path, b, 0600); err != nil {
