@@ -53,4 +53,3 @@ monoctl sheet --id 1LEh1... --tab-name Sheet1 --auth google-service-account.json
 - Pass `--rows-file /path/data.json`.
 - Pass multiple `--row "name,email,telephone" --row "salman,salman@example.com,123456789"` flags.
 - Use `monoctl help command`, and remove `monoctl --help`.
-- `monoctl data-source view <type>/<name> --dry-run`.

@@ -12,6 +12,10 @@ import (
   "go.yaml.in/yaml/v4"
 )
 
+type Runner interface {
+  GetRows() ([][]any, error)
+}
+
 type BuildInfo struct {
   Version string
   Commit string

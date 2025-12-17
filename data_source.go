@@ -25,8 +25,7 @@ type DataSource struct {
   Limit     int       `yaml:"limit,omitempty"`
   Fields    []string  `yaml:"fields,omitempty"`
   Query     string    `yaml:"query,omitempty"`
-
-  // dryRun bool
+  DryRun    bool      `yaml:"-"`
 }
 
 var allowedTypes = map[string]struct{}{
@@ -64,6 +63,31 @@ func (ds *DataSource) checkArgFormat(args []string) error {
   ds.Type = parts[0]
   ds.Name = parts[1]
   return nil
+}
+
+func (ds *DataSource) load(args []string) (string, error) {
+  if err := ds.checkArgFormat(args); err != nil { return "", err }
+
+  path, err := ds.getFilePath()
+  if err != nil { return "", err }
+
+  b, err := os.ReadFile(path)
+  if err != nil {
+    return "", fmt.Errorf("data source '%s/%s' not found", ds.Type, ds.Name)
+  }
+
+  var d DataSource
+  if err := yaml.Unmarshal(b, &d); err != nil {
+    return "", fmt.Errorf("cannot unmarshal data source: %w", err)
+  }
+
+  rows, err := d.RunQuery()
+  if err != nil { return "", err }
+
+  str, err := toJson(rows)
+  if err != nil { return "", err }
+
+  return str, nil
 }
 
 func (ds *DataSource) Create(cmd *cobra.Command, args []string) error {
@@ -113,12 +137,25 @@ func (ds *DataSource) View(cmd *cobra.Command, args []string) error {
     return fmt.Errorf("data source '%s/%s' not found", ds.Type, ds.Name)
   }
 
-  // if err := yaml.Unmarshal(b, ds); err != nil {
-  //   return fmt.Errorf("cannot unmarshal data source: %w", err)
-  // }
+  // --dry-run => execute query and show result
+  if ds.DryRun {
+    var d DataSource
+    if err := yaml.Unmarshal(b, &d); err != nil {
+      return fmt.Errorf("cannot unmarshal data source: %w", err)
+    }
 
+    rows, err := d.RunQuery()
+    if err != nil { return err }
+
+    str, err := toJson(rows)
+    if err != nil { return err }
+
+    fmt.Println(str)
+    return nil
+  }
+
+  // default: show raw YAML
   fmt.Print(string(b))
-
   return nil
 }
 
@@ -161,4 +198,20 @@ func (ds *DataSource) List(cmd *cobra.Command, args []string) error {
   }
 
   return nil
+}
+
+func (ds *DataSource) RunQuery() ([][]any, error) {
+  runner, err := ds.runner()
+  if err != nil { return nil, err }
+
+  return runner.GetRows()
+}
+
+func (ds *DataSource) runner() (Runner, error) {
+  switch ds.Type {
+    case "mongodb":
+      return &MongoDB{Uri: ds.Uri, Collection: ds.Table, Fields: ds.Fields, QueryJSON: ds.Query}, nil
+    default:
+      return nil, fmt.Errorf("unsupported data source: %s", ds.Type)
+  }
 }

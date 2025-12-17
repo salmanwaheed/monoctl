@@ -71,18 +71,10 @@ func (s *Sheet) auth() (*sheets.Service, error) {
 }
 
 func (s *Sheet) InsertRows(cmd *cobra.Command, args []string) error {
-  if s.DataSource == "mongodb" {
-    m := &MongoDB{
-      Uri: "xxxxxx",
-      Collection: "lead",
-      Fields: []string{"name", "email", "code", "telephone", "country", "nationality", "companyName", "salary", "category", "productTitle", "dateCreated", "lastUpdated"},
-      QueryJSON: `{"category":"credit-cards","dateCreated":{"$lte":ISODate("2025-12-13T08:09:06.553Z")}}`,
-    }
+  if s.DataSource != "" {
+    ds := &DataSource{}
 
-    rows, err := m.GetRows()
-    if err != nil { return err }
-
-    str, err := toJson(rows)
+    str, err := ds.load([]string{s.DataSource})
     if err != nil { return err }
 
     s.Rows.Set(str)

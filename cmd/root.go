@@ -8,8 +8,6 @@ import (
 var (
   cfg = &monoctl.Config{EnvPrefix: rootCmd.Name()}
 
-  ds = &monoctl.DataSource{}
-
   rootCmd = &cobra.Command{
     Use: "monoctl",
     Short: "A Go based CLI tool",

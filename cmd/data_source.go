@@ -1,10 +1,13 @@
 package cmd
 
 import (
+  "github.com/salmanwaheed/monoctl"
   "github.com/spf13/cobra"
 )
 
 var (
+  ds = &monoctl.DataSource{}
+
   dsCmd = &cobra.Command{Use: "data-source", Short: "Manage reusable data sources"}
 
   dsCreateCmd = &cobra.Command{
@@ -51,7 +54,7 @@ func init() {
   dsCreateCmd.MarkFlagRequired("query")
 
   // view flags
-  // dsViewCmd.Flags().BoolVar(&ds.DryRun, "dry-run", false, "Show results")
+  dsViewCmd.Flags().BoolVar(&ds.DryRun, "dry-run", false, "Execute & preview data")
 
   dsCmd.AddCommand(dsCreateCmd, dsDeleteCmd, dsViewCmd, dsListCmd)
   rootCmd.AddCommand(dsCmd)
