@@ -9,6 +9,7 @@ import (
   "text/template"
 
   "github.com/spf13/cobra"
+  "go.mongodb.org/mongo-driver/bson/primitive"
   "go.yaml.in/yaml/v4"
 )
 
@@ -48,6 +49,15 @@ func configDir(paths ...string) (string, error) {
   return path, nil
 }
 
+func formatValue(v any) any {
+  switch t := v.(type) {
+    case primitive.DateTime:
+      return t.Time().Format("2006-01-02 15:04:05")
+    default:
+      return v
+  }
+}
+
 func mapToRows(fields []string, rawData []map[string]any) [][]any {
   var rows [][]any
 
@@ -55,7 +65,7 @@ func mapToRows(fields []string, rawData []map[string]any) [][]any {
     row := make([]any, len(fields))
 
     for i, f := range fields {
-      row[i] = rd[f]
+      row[i] = formatValue(rd[f])
     }
 
     rows = append(rows, row)
