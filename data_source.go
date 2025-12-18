@@ -22,9 +22,7 @@ type DataSource struct {
   Name      string    `yaml:"name"`
   Uri       string    `yaml:"uri,omitempty"`
   Table     string    `yaml:"table,omitempty"`
-  Limit     int64     `yaml:"limit,omitempty"`
-  Fields    []string  `yaml:"fields,omitempty"`
-  Query     string    `yaml:"query,omitempty"`
+  Query     QueryDSL
 
   Overwrite bool      `yaml:"-"`
   DryRun    bool      `yaml:"-"`
@@ -238,9 +236,12 @@ func (ds *DataSource) runner() (Runner, error) {
       return &MongoDB{
           Uri: ds.Uri,
           Collection: ds.Table,
-          Fields: ds.Fields,
-          QueryJSON: ds.Query,
-          Limit: ds.Limit,
+          Query: QueryDSL{
+            Filter: ds.Query.Filter,
+            Select: ds.Query.Select,
+            Sort: ds.Query.Sort,
+            Limit: ds.Query.Limit,
+          },
         }, nil
     default:
       return nil, fmt.Errorf("unsupported data source type: %s", ds.Type)

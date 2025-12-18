@@ -89,9 +89,10 @@ monoctl data-source create <type>/<name> \
   --uri "mongodb://<host>:27017/<db_name>?ssl=true" \
   --table <collection> \
   --limit 10 \
-  --fields 'f1,f2,...' \
-  --query '{"key":"value",...}' \
-  --overwrite # Update/Overwrite data source
+  --select 'f1,f2,...' \
+  --sort '{"k1":"desc|asc"}' \
+  --filter '{"k1":"v1","k1":{"gte":"2025-12-17T11:00:00+04:00"}}' \
+  --overwrite
 
 monoctl data-source delete <type>/<name>            # Delete a data source
 monoctl data-source view <type>/<name>              # View data source YAML
@@ -136,8 +137,9 @@ monoctl data-source create mongodb/users \
   --uri mongodb://localhost:27017/db \
   --table users \
   --limit 10 \
-  --fields 'name,email' \
-  --query '{"active":true}'
+  --select 'name,email' \
+  --sort '{"name":"desc"}' \
+  --filter '{"active":true}'
 ```
 
 ---

@@ -2,6 +2,7 @@ package monoctl
 
 import (
   "context"
+  "encoding/json"
   "errors"
   "fmt"
   "time"
@@ -17,9 +18,7 @@ const mongoTimeout time.Duration = 10 * time.Second
 type MongoDB struct {
   Uri string
   Collection string
-  Fields []string
-  QueryJSON string
-  Limit int64
+  Query QueryDSL
 
   ctx context.Context
 }
@@ -77,17 +76,19 @@ func (m *MongoDB) Find(out any) error {
   opts := options.Find()
   // opts.SetProjection(projMap)
 
-  if m.Limit > 0 {
-    opts.SetLimit(m.Limit)
+  if m.Query.Limit > 0 {
+    opts.SetLimit(m.Query.Limit)
   }
 
-  opts.SetSort(bson.M{"dateCreated": -1})
+  if len(m.Query.Sort) > 0 {
+    sort, err := m.Query.Sort.ToBSON()
+    if err != nil { return err }
 
-  // parse query
-  var query bson.M
-  if err := bson.UnmarshalExtJSON([]byte(m.QueryJSON), true, &query); err != nil {
-    return fmt.Errorf("invalid query JSON: %w", err)
+    opts.SetSort(sort)
   }
+
+  query, err := m.Query.Filter.ToBSON()
+  if err != nil { return err }
 
   cs, err := connstring.ParseAndValidate(m.Uri)
   if err != nil {
@@ -114,5 +115,135 @@ func (m *MongoDB) GetRows() ([][]any, error) {
     return nil, err
   }
 
-  return mapToRows(m.Fields, rawData), nil
+  return mapToRows(m.Query.Select, rawData), nil
+}
+
+type sort map[string]string
+
+func (s *sort) String() string {
+  if s == nil || len(*s) == 0 {
+    return ""
+  }
+
+  b, err := json.Marshal(*s)
+  if err != nil {
+    return fmt.Sprintf("failed to marshal sort: %v", err)
+  }
+
+  return string(b)
+}
+
+func (s *sort) Set(v string) error {
+  if v == "" {
+    return errors.New("sort input is empty")
+  }
+
+  if err := json.Unmarshal([]byte(v), s); err != nil {
+    return fmt.Errorf("invalid sort json: %v", err)
+  }
+
+  return nil
+}
+
+func (s *sort) Type() string {
+  return "sort"
+}
+
+func (s *sort) ToBSON() (bson.D, error) {
+  out := bson.D{}
+
+  for field, val := range *s {
+    switch val {
+      case "asc", "1":
+        out = append(out, bson.E{Key: field, Value: 1})
+      case "desc", "-1":
+        out = append(out, bson.E{Key: field, Value: -1})
+      default:
+        return nil, fmt.Errorf("unsupported operator %q for field %q", val, field)
+    }
+  }
+
+  return out, nil
+}
+
+type filter map[string]any
+
+var allowedFilterOperators = map[string]struct{}{
+  "eq":  {},
+  "ne":  {},
+  "gt":  {},
+  "gte": {},
+  "lt":  {},
+  "lte": {},
+  "in":  {},
+  "nin": {},
+  "regex": {},
+  "exists": {},
+}
+
+func (f *filter) String() string {
+  if f == nil || len(*f) == 0 {
+    return ""
+  }
+
+  b, err := json.Marshal(*f)
+  if err != nil {
+    return fmt.Sprintf("failed to marshal filter: %v", err)
+  }
+
+  return string(b)
+}
+
+func (f *filter) Set(v string) error {
+  if v == "" {
+    return errors.New("filter input is empty")
+  }
+
+  if err := json.Unmarshal([]byte(v), f); err != nil {
+    return fmt.Errorf("invalid filter json: %v", err)
+  }
+
+  return nil
+}
+
+func (f *filter) Type() string {
+  return "filter"
+}
+
+func (f *filter) ToBSON() (bson.M, error) {
+  out := bson.M{}
+
+  for field, raw := range *f {
+    switch v := raw.(type) {
+      // case 1: implicit equality
+      case string, int, int64, float64, bool:
+        out[field] = v
+
+      // case 2: operator based
+      case filter:
+        opMap := bson.M{}
+
+        for op, val := range v {
+          if _, ok := allowedFilterOperators[op]; !ok {
+            return nil, fmt.Errorf("unsupported operator %q for field %q", op, field)
+          }
+
+          opMap["$"+op] = val
+        }
+
+        out[field] = opMap
+
+      default:
+        return nil, fmt.Errorf("invalid filter value for '%s'", field)
+    }
+  }
+
+  return out, nil
+}
+
+type QueryDSL struct {
+  Filter  filter    `yaml:"filter,omitempty"`
+  Select  []string  `yaml:"select,omitempty"`
+  Sort    sort      `yaml:"sort,omitempty"`
+  Limit   int64     `yaml:"limit,omitempty"`
 }

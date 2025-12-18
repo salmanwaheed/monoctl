@@ -7,6 +7,7 @@ import (
   "path/filepath"
   "strings"
   "text/template"
+  "time"
 
   "github.com/spf13/cobra"
   "go.mongodb.org/mongo-driver/bson/primitive"
@@ -56,6 +57,8 @@ func formatValue(v any) any {
       return ""
     case primitive.DateTime:
       return t.Time().Format("2006-01-02 15:04:05")
+    case time.Time:
+      return t.Format("2006-01-02 15:04:05")
     default:
       return v
   }

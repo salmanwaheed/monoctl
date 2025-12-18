@@ -43,9 +43,10 @@ func init() {
   // create flags
   dsCreateCmd.Flags().StringVar(&ds.Uri, "uri", "", "Data source connection URI")
   dsCreateCmd.Flags().StringVar(&ds.Table, "table", "", "Collection or table name")
-  dsCreateCmd.Flags().Int64Var(&ds.Limit, "limit", 0, "Maximum number of records")
-  dsCreateCmd.Flags().StringSliceVar(&ds.Fields, "fields", []string{}, "Fields to fetch (ordered)")
-  dsCreateCmd.Flags().StringVar(&ds.Query, "query", "", "Query filter (JSON)")
+  dsCreateCmd.Flags().Var(&ds.Query.Filter, "filter", "Query filter (JSON)")
+  dsCreateCmd.Flags().StringSliceVar(&ds.Query.Select, "select", []string{}, "Select to fetch (ordered)")
+  dsCreateCmd.Flags().Var(&ds.Query.Sort, "sort", "Sort records")
+  dsCreateCmd.Flags().Int64Var(&ds.Query.Limit, "limit", 0, "Maximum number of records")
   dsCreateCmd.Flags().BoolVar(&ds.Overwrite, "overwrite", false, "Overwrite Query")
 
   // create flags required
