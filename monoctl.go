@@ -26,7 +26,7 @@ type BuildInfo struct {
 }
 
 func (b *BuildInfo) Show(cmd *cobra.Command, args []string) error {
-  return executeFormatFlag(cmd, b)
+  return executeFormatFlag(cmd, *b)
 }
 
 func CheckErr(err error) {
