@@ -22,9 +22,10 @@ type DataSource struct {
   Name      string    `yaml:"name"`
   Uri       string    `yaml:"uri,omitempty"`
   Table     string    `yaml:"table,omitempty"`
-  Limit     int       `yaml:"limit,omitempty"`
+  Limit     int64     `yaml:"limit,omitempty"`
   Fields    []string  `yaml:"fields,omitempty"`
   Query     string    `yaml:"query,omitempty"`
+
   Overwrite bool      `yaml:"-"`
   DryRun    bool      `yaml:"-"`
 }
@@ -34,21 +35,27 @@ var allowedTypes = map[string]struct{}{
   "mariadb": {},
 }
 
-func (ds *DataSource) getFilePath() (string, error) {
+func (ds *DataSource) validate() error {
   if ds.Type == "" || ds.Name == "" {
-    return "", fmt.Errorf("type and name are required")
+    return errors.New("type and name are required")
   }
 
   if _, ok := allowedTypes[ds.Type]; !ok {
-    return "", fmt.Errorf("invalid type: '%s'", ds.Type)
+    return fmt.Errorf("invalid data source type: %q", ds.Type)
+  }
+
+  return nil
+}
+
+func (ds *DataSource) getFilePath() (string, error) {
+  if err := ds.validate(); err != nil {
+    return "", err
   }
 
   dir, err := configDir(DIR_NAME, ds.Type)
   if err != nil { return "", fmt.Errorf("cannot get data-sources directory: %w", err) }
 
-  path := filepath.Join(dir, ds.Name + FILE_EXT)
-
-  return path, nil
+  return filepath.Join(dir, ds.Name + FILE_EXT), nil
 }
 
 func (ds *DataSource) checkArgFormat(args []string) error {
@@ -58,7 +65,7 @@ func (ds *DataSource) checkArgFormat(args []string) error {
 
   parts := strings.Split(args[0], "/")
   if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-    return fmt.Errorf("argument must be <type>/<name> format")
+    return fmt.Errorf("invalid argument %q (expected <type>/<name>)", args[0])
   }
 
   ds.Type = parts[0]
@@ -74,7 +81,10 @@ func (ds *DataSource) load(args []string) (string, error) {
 
   b, err := os.ReadFile(path)
   if err != nil {
-    return "", fmt.Errorf("data source '%s/%s' not found", ds.Type, ds.Name)
+    if errors.Is(err, os.ErrNotExist) {
+      return "", fmt.Errorf("data source '%s/%s' not found", ds.Type, ds.Name)
+    }
+    return "", fmt.Errorf("read data source file: %w", err)
   }
 
   var d DataSource
@@ -83,10 +93,14 @@ func (ds *DataSource) load(args []string) (string, error) {
   }
 
   rows, err := d.RunQuery()
-  if err != nil { return "", err }
+  if err != nil {
+    return "", fmt.Errorf("execute query: %w", err)
+  }
 
   str, err := toJson(rows)
-  if err != nil { return "", err }
+  if err != nil {
+    return "", fmt.Errorf("serialize rows to JSON: %w", err)
+  }
 
   return str, nil
 }
@@ -97,20 +111,19 @@ func (ds *DataSource) Create(cmd *cobra.Command, args []string) error {
   path, err := ds.getFilePath()
   if err != nil { return err }
 
+  if !ds.Overwrite {
+    if _, err := os.Stat(path); err == nil {
+      return fmt.Errorf("data source '%s/%s' already exists (use --overwrite)", ds.Type, ds.Name)
+    }
+  }
+
   b, err := yaml.Marshal(ds)
   if err != nil {
     return fmt.Errorf("cannot marshal data source: %w", err)
   }
 
-  // avoid overwrite existing file silently
-  if !ds.Overwrite {
-    if _, err := os.Stat(path); err == nil {
-      return fmt.Errorf("data source '%s/%s' already exists", ds.Type, ds.Name)
-    }
-  }
-
   if err := os.WriteFile(path, b, 0600); err != nil {
-    return fmt.Errorf("cannot write file: %w", err)
+    return fmt.Errorf("cannot write data source file: %w", err)
   }
 
   return nil
@@ -122,8 +135,11 @@ func (ds *DataSource) Delete(cmd *cobra.Command, args []string) error {
   path, err := ds.getFilePath()
   if err != nil { return err }
 
-  if err := os.Remove(path); errors.Is(err, os.ErrNotExist) {
-    return fmt.Errorf("data source '%s/%s' not found", ds.Type, ds.Name)
+  if err := os.Remove(path); err != nil {
+    if errors.Is(err, os.ErrNotExist) {
+      return fmt.Errorf("data source '%s/%s' not found", ds.Type, ds.Name)
+    }
+    return fmt.Errorf("unable to delete data source %w", err)
   }
 
   return nil
@@ -137,10 +153,12 @@ func (ds *DataSource) View(cmd *cobra.Command, args []string) error {
 
   b, err := os.ReadFile(path)
   if err != nil {
-    return fmt.Errorf("data source '%s/%s' not found", ds.Type, ds.Name)
+    if errors.Is(err, os.ErrNotExist) {
+      return fmt.Errorf("data source '%s/%s' not found", ds.Type, ds.Name)
+    }
+    return fmt.Errorf("read data source file: %w", err)
   }
 
-  // --dry-run => execute query and show result
   if ds.DryRun {
     var d DataSource
     if err := yaml.Unmarshal(b, &d); err != nil {
@@ -148,10 +166,14 @@ func (ds *DataSource) View(cmd *cobra.Command, args []string) error {
     }
 
     rows, err := d.RunQuery()
-    if err != nil { return err }
+    if err != nil {
+      return fmt.Errorf("execute query: %w", err)
+    }
 
     str, err := toJson(rows)
-    if err != nil { return err }
+    if err != nil {
+      return fmt.Errorf("serialize rows to JSON: %w", err)
+    }
 
     fmt.Println(str)
     return nil
@@ -167,11 +189,11 @@ func (ds *DataSource) List(cmd *cobra.Command, args []string) error {
   fmt.Printf("%-8s %-18s %-20s\n", "----", "----", "-----")
 
   dir, err := configDir(DIR_NAME)
-  if err != nil { return err }
+  if err != nil { return fmt.Errorf("cannot get data-sources directory: %w", err) }
 
   err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
     if err != nil {
-      fmt.Fprintf(os.Stderr, "walk error: %v\n", err)
+      fmt.Fprintf(os.Stderr, "warning: %v\n", err)
       return nil
     }
 
@@ -181,13 +203,13 @@ func (ds *DataSource) List(cmd *cobra.Command, args []string) error {
 
     b, err := os.ReadFile(path)
     if err != nil {
-      fmt.Fprintf(os.Stderr, "cannot read file '%s': %v\n", path, err)
+      fmt.Fprintf(os.Stderr, "warning: cannot read '%s': %v\n", path, err)
       return nil
     }
 
     var data DataSource
     if err := yaml.Unmarshal(b, &data); err != nil {
-      fmt.Fprintf(os.Stderr, "cannot parse YAML '%s': %v\n", path, err)
+      fmt.Fprintf(os.Stderr, "warning: cannot parse YAML %s: %v\n", path, err)
       return nil
     }
 
@@ -213,8 +235,14 @@ func (ds *DataSource) RunQuery() ([][]any, error) {
 func (ds *DataSource) runner() (Runner, error) {
   switch ds.Type {
     case "mongodb":
-      return &MongoDB{Uri: ds.Uri, Collection: ds.Table, Fields: ds.Fields, QueryJSON: ds.Query}, nil
+      return &MongoDB{
+          Uri: ds.Uri,
+          Collection: ds.Table,
+          Fields: ds.Fields,
+          QueryJSON: ds.Query,
+          Limit: ds.Limit,
+        }, nil
     default:
-      return nil, fmt.Errorf("unsupported data source: %s", ds.Type)
+      return nil, fmt.Errorf("unsupported data source type: %s", ds.Type)
   }
 }

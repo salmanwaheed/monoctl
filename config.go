@@ -61,7 +61,9 @@ func (c *Config) load() error {
     if e, ok := err.(viper.UnsupportedConfigError); ok {
       return fmt.Errorf("%v", e)
     } else if _, ok := err.(*fs.PathError); ok {
-      viper.SafeWriteConfigAs(cfgFile)
+      if err := viper.SafeWriteConfigAs(cfgFile); err != nil {
+        return fmt.Errorf("unable to create a new config file: %w", err)
+      }
       return fmt.Errorf("config missing, created new file: %v", cfgFile)
     } else {
       return fmt.Errorf("unable to read config: %v", err)

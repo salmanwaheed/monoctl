@@ -28,9 +28,10 @@ func (b *BuildInfo) Show(cmd *cobra.Command, args []string) error {
   return executeFormatFlag(cmd, b)
 }
 
-func CheckErr(msg interface{}) {
-  if msg != nil {
-    fmt.Fprintln(os.Stderr, "error:", msg)
+func CheckErr(err error) {
+  if err != nil {
+    fmt.Fprintln(os.Stderr, "error:", err)
+    os.Exit(1)
   }
 }
 
@@ -51,6 +52,8 @@ func configDir(paths ...string) (string, error) {
 
 func formatValue(v any) any {
   switch t := v.(type) {
+    case nil:
+      return ""
     case primitive.DateTime:
       return t.Time().Format("2006-01-02 15:04:05")
     default:
@@ -114,7 +117,9 @@ func tmpl(name string, text string, data any) error {
   }
 
   if !strings.Contains(text, "yaml") {
-    os.Stdout.Write([]byte("\n"))
+    if _, err := os.Stdout.Write([]byte("\n")); err != nil {
+      return fmt.Errorf("unable to write newline: %w", err)
+    }
   }
 
   return nil
@@ -134,19 +139,21 @@ func BindFormatFlag(cmd *cobra.Command) {
 
 // output as json, yaml, or template
 func executeFormatFlag(cmd *cobra.Command, data any) error {
-  value := strings.ToLower(strings.TrimSpace(valFormatFlag))
+  value := strings.TrimSpace(valFormatFlag)
 
   switch {
     case value == "{{.}}" || !cmd.Flags().Changed("format"):
-      fmt.Printf("%+v\n", data)
+      if _, err := fmt.Fprintf(os.Stdout, "%+v\n", data); err != nil {
+        return fmt.Errorf("printing default output failed: %w", err)
+      }
 
     case strings.HasPrefix(value, "{{") && strings.HasSuffix(value, "}}"):
       return tmpl("formatterTemplate", valFormatFlag, data)
 
-    case value == "json":
+    case strings.EqualFold(value, "json"):
       return printFn(data, toJson, &PrintOptions{NewLine: true})
 
-    case value == "yaml":
+    case strings.EqualFold(value, "yaml"):
       return printFn(data, toYaml)
 
     default:
@@ -170,6 +177,9 @@ func printFn(v any, fn func(any) (string, error), opts ...*PrintOptions) error {
   suffix := ""
   if newline { suffix = "\n" }
 
-  fmt.Printf("%v%s", out, suffix)
+  if _, err := fmt.Printf("%v%s", out, suffix); err != nil {
+    return fmt.Errorf("printing output failed: %w", err)
+  }
+
   return nil
 }

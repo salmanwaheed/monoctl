@@ -2,6 +2,7 @@ package monoctl
 
 import (
   "context"
+  "errors"
   "fmt"
   "time"
 
@@ -11,39 +12,53 @@ import (
   "go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
+const mongoTimeout time.Duration = 10 * time.Second
+
 type MongoDB struct {
   Uri string
   Collection string
   Fields []string
   QueryJSON string
+  Limit int64
 
   ctx context.Context
-  timeout time.Duration
-  // client *mongo.Client
 }
 
-func (m *MongoDB) auth() (*mongo.Client, error) {
-  m.timeout = 10 * time.Second
+func (m *MongoDB) validate() error {
+  switch {
+    case m.Uri == "":
+      return errors.New("mongodb uri is required")
+    case m.Collection == "":
+      return errors.New("mongodb collection is required")
+  }
 
-  ctx, cancel := context.WithTimeout(context.TODO(), m.timeout)
+  return nil
+}
+
+func (m *MongoDB) connect() (*mongo.Client, error) {
+  ctxbg := context.Background()
+  ctx, cancel := context.WithTimeout(ctxbg, mongoTimeout)
   defer cancel()
 
   client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.Uri))
   if err != nil {
-    return nil, fmt.Errorf("unable to connect: %v", err)
+    return nil, fmt.Errorf("unable to connect: %w", err)
   }
   // defer client.Disconnect(ctx)
 
   if err := client.Ping(ctx, nil); err != nil {
-    return nil, fmt.Errorf("unable to ping: %v", err)
+    _ = client.Disconnect(ctx)
+    return nil, fmt.Errorf("unable to ping: %w", err)
   }
 
-  m.ctx = context.TODO()
+  m.ctx = ctxbg
   return client, nil
 }
 
 func (m *MongoDB) Find(out any) error {
-  client, err := m.auth()
+  if err := m.validate(); err != nil { return err }
+
+  client, err := m.connect()
   if err != nil {
     return err
   }
@@ -61,34 +76,42 @@ func (m *MongoDB) Find(out any) error {
 
   opts := options.Find()
   // opts.SetProjection(projMap)
-  opts.SetLimit(2)
+
+  if m.Limit > 0 {
+    opts.SetLimit(m.Limit)
+  }
+
   opts.SetSort(bson.M{"dateCreated": -1})
 
   // parse query
   var query bson.M
-  bson.UnmarshalExtJSON([]byte(m.QueryJSON), true, &query)
+  if err := bson.UnmarshalExtJSON([]byte(m.QueryJSON), true, &query); err != nil {
+    return fmt.Errorf("invalid query JSON: %w", err)
+  }
 
-  cs, _ := connstring.ParseAndValidate(m.Uri)
+  cs, err := connstring.ParseAndValidate(m.Uri)
+  if err != nil {
+    return fmt.Errorf("invalid mongodb uri: %w", err)
+  }
+
   cur, err := client.Database(cs.Database).Collection(m.Collection).Find(m.ctx, query, opts)
   if err != nil {
-    return fmt.Errorf("unable to run query: %v", err)
+    return fmt.Errorf("unable to run query: %w", err)
   }
   defer cur.Close(m.ctx)
 
-  // var rawData []map[string]any
-  // if err := cur.All(m.ctx, &rawData); err != nil {
-  //   return fmt.Errorf("unable to decode cursor: %v", err)
-  // }
-  // fmt.Println(rawData)
+  if err := cur.All(m.ctx, out); err != nil {
+    return fmt.Errorf("unable to decode cursor: %w", err)
+  }
 
-  return cur.All(m.ctx, out)
+  return nil
 }
 
 func (m *MongoDB) GetRows() ([][]any, error) {
   var rawData []map[string]any
 
   if err := m.Find(&rawData); err != nil {
-    return nil, fmt.Errorf("unable to decode cursor: %v", err)
+    return nil, err
   }
 
   return mapToRows(m.Fields, rawData), nil

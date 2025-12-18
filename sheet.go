@@ -3,6 +3,7 @@ package monoctl
 import (
   "context"
   "encoding/json"
+  "errors"
   "fmt"
   "os"
 
@@ -19,12 +20,24 @@ func (r *rows) String() string {
     return "[]"
   }
 
-  b, _ := json.Marshal(*r)
+  b, err := json.Marshal(*r)
+  if err != nil {
+    return fmt.Sprintf("failed to marshal rows: %v", err)
+  }
+
   return string(b)
 }
 
 func (r *rows) Set(v string) error {
-  return json.Unmarshal([]byte(v), r)
+  if v == "" {
+    return errors.New("rows input is empty")
+  }
+
+  if err := json.Unmarshal([]byte(v), r); err != nil {
+    return fmt.Errorf("invalid rows JSON: %v", err)
+  }
+
+  return nil
 }
 
 func (r *rows) Type() string {
@@ -70,18 +83,35 @@ func (s *Sheet) auth() (*sheets.Service, error) {
   return srv, nil
 }
 
+func (s *Sheet) validate() error {
+  switch {
+    case s.ID == "":
+      return errors.New("spreadsheet ID is required")
+    case s.TabName == "":
+      return errors.New("sheet tab name is required")
+    case len(s.Rows) == 0:
+      return errors.New("no rows provided to insert")
+  }
+
+  return nil
+}
+
 func (s *Sheet) InsertRows(cmd *cobra.Command, args []string) error {
   if s.DataSource != "" {
     ds := &DataSource{}
 
     str, err := ds.load([]string{s.DataSource})
-    if err != nil { return err }
+    if err != nil {
+      return fmt.Errorf("load datasource %w", err)
+    }
 
-    s.Rows.Set(str)
+    if err := s.Rows.Set(str); err != nil {
+      return fmt.Errorf("parse datasource rows: %w", err)
+    }
   }
 
-  if len(s.Rows) == 0 {
-    return fmt.Errorf("no rows to insert")
+  if err := s.validate(); err != nil {
+    return err
   }
 
   if s.DryRun {
