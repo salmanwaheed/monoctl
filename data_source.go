@@ -18,11 +18,11 @@ const (
 )
 
 type DataSource struct {
-  Type      string    `yaml:"type"`
-  Name      string    `yaml:"name"`
-  Uri       string    `yaml:"uri,omitempty"`
-  Table     string    `yaml:"table,omitempty"`
-  Query     QueryDSL
+  Type      string    `yaml:"Type"`
+  Name      string    `yaml:"Name"`
+  Uri       string    `yaml:"Uri,omitempty"`
+  Table     string    `yaml:"Table,omitempty"`
+  Query     QueryDSL  `yaml:"Query,omitempty"`
 
   Overwrite bool      `yaml:"-"`
   DryRun    bool      `yaml:"-"`

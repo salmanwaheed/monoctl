@@ -242,8 +242,8 @@ func (f *filter) ToBSON() (bson.M, error) {
 }
 
 type QueryDSL struct {
-  Filter  filter    `yaml:"filter,omitempty"`
-  Select  []string  `yaml:"select,omitempty"`
-  Sort    sort      `yaml:"sort,omitempty"`
-  Limit   int64     `yaml:"limit,omitempty"`
+  Filter  filter    `yaml:"Filter,omitempty"`
+  Select  []string  `yaml:"Select,omitempty"`
+  Sort    sort      `yaml:"Sort,omitempty"`
+  Limit   int64     `yaml:"Limit,omitempty"`
 }
