@@ -18,6 +18,15 @@ type Config struct {
   filePath string // points to a string variable
 }
 
+type mapConfig struct {
+  SheetID           string `mapstructure:"sheet_id" yaml:"SheetID"`
+  SheetTabName      string `mapstructure:"sheet_tab_name" yaml:"SheetTabName"`
+  SheetAuthFile     string `mapstructure:"sheet_auth_file" yaml:"SheetAuthFile"`
+  SheetDataSource   string `mapstructure:"sheet_data_source,omitempty" yaml:"SheetDataSource"`
+}
+
+var mapCfg mapConfig
+
 func (c *Config) expandFilePath(p string) string {
   return os.ExpandEnv(p)
 }
@@ -68,6 +77,10 @@ func (c *Config) load() error {
     } else {
       return fmt.Errorf("unable to read config: %v", err)
     }
+  }
+
+  if err := viper.Unmarshal(&mapCfg); err != nil {
+    return fmt.Errorf("unable to unmarshal config into struct: %v", err)
   }
 
   // else {
@@ -138,7 +151,7 @@ func (c *Config) Unset(cmd *cobra.Command, args []string) error {
 
 // show config (json or template)
 func (c *Config) List(cmd *cobra.Command, args []string) error {
-  return executeFormatFlag(cmd, c.getData())
+  return executeFormatFlag(cmd, mapCfg)
 }
 
 // check if key exists anywhere in Viper (file, env, default, Set)
