@@ -19,10 +19,13 @@ type Runner interface {
 }
 
 type BuildInfo struct {
-  Version    string `yaml:"Version"`
-  Commit     string `yaml:"Commit"`
-  Repository string `yaml:"Repository"`
-  Maintainer string `yaml:"Maintainer"`
+  Version     string `yaml:"Version"`
+  GitCommit   string `yaml:"GitCommit"`
+  GoVersion   string `yaml:"GoVersion"`
+  Repository  string `yaml:"Repository"`
+  Maintainer  string `yaml:"Maintainer"`
+  OS          string `yaml:"OS"`
+  Arch        string `yaml:"Arch"`
 }
 
 func (b *BuildInfo) Show(cmd *cobra.Command, args []string) error {
