@@ -115,14 +115,31 @@ func (ds *DataSource) Create(cmd *cobra.Command, args []string) error {
     }
   }
 
-  b, err := yaml.Marshal(ds)
+  // b, err := yaml.Marshal(ds)
+  // if err != nil {
+  //   return fmt.Errorf("cannot marshal data source: %w", err)
+  // }
+
+  // if err := os.WriteFile(path, b, 0600); err != nil {
+  //   return fmt.Errorf("cannot write data source file: %w", err)
+  // }
+
+  // encode with 2 spaces indentation
+  f, err := os.Create(path)
   if err != nil {
+      return fmt.Errorf("cannot create data source file: %w", err)
+  }
+  defer f.Close()
+
+  enc := yaml.NewEncoder(f)
+  defer enc.Close()
+
+  enc.SetIndent(2) // use 2 spaces, instead of 4
+
+  if err := enc.Encode(ds); err != nil {
     return fmt.Errorf("cannot marshal data source: %w", err)
   }
-
-  if err := os.WriteFile(path, b, 0600); err != nil {
-    return fmt.Errorf("cannot write data source file: %w", err)
-  }
+  // encode with 2 spaces indentation
 
   return nil
 }
