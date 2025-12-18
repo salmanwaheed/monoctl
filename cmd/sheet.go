@@ -23,7 +23,6 @@ func init() {
   sheetCmd.Flags().StringVar(&sheet.TabName, "tab-name", "", "Google Sheet tab name")
   sheetCmd.Flags().Var(&sheet.Rows, "rows", "Google Sheet rows as JSON array")
   sheetCmd.Flags().StringVar(&sheet.DataSource, "data-source", "", "Get rows from database")
-  sheetCmd.Flags().BoolVar(&sheet.DryRun, "dry-run", false, "Print rows only")
 
   // // required flags
   sheetCmd.MarkFlagRequired("auth")

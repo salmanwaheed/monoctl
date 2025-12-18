@@ -47,7 +47,6 @@ func (r *rows) Type() string {
 type Sheet struct {
   AuthFile string
   DataSource string
-  DryRun bool
 
   ID string
   TabName string
@@ -112,11 +111,6 @@ func (s *Sheet) InsertRows(cmd *cobra.Command, args []string) error {
 
   if err := s.validate(); err != nil {
     return err
-  }
-
-  if s.DryRun {
-    fmt.Println(s.Rows.String())
-    return nil
   }
 
   srv, err := s.auth()
