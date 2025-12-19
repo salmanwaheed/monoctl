@@ -8,15 +8,7 @@ import (
 )
 
 var (
-  ver = &monoctl.BuildInfo{
-    Version: "dev",
-    GitCommit: "none",
-    Repository: "github.com/salmanwaheed/monoctl",
-    Maintainer: "Salman Waheed",
-    GoVersion: "go1.25.5",  // go version | awk '{print $3}'
-    OS: "linux",            // uname --kernel-name
-    Arch: "x86_64",         // uname --machine
-  }
+  ver = monoctl.NewBuildInfo()
 
   verCmd = &cobra.Command{
     Use: "version",

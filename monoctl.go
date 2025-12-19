@@ -18,20 +18,6 @@ type Runner interface {
   GetRows() ([][]any, error)
 }
 
-type BuildInfo struct {
-  Version     string `yaml:"Version"`
-  GitCommit   string `yaml:"GitCommit"`
-  GoVersion   string `yaml:"GoVersion"`
-  Repository  string `yaml:"Repository"`
-  Maintainer  string `yaml:"Maintainer"`
-  OS          string `yaml:"OS"`
-  Arch        string `yaml:"Arch"`
-}
-
-func (b *BuildInfo) Show(cmd *cobra.Command, args []string) error {
-  return executeFormatFlag(cmd, *b)
-}
-
 func CheckErr(err error) {
   if err != nil {
     fmt.Fprintln(os.Stderr, "error:", err)
