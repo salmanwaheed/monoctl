@@ -8,10 +8,8 @@ It lets you define reusable data sources (MongoDB, SQL, etc.) and push their dat
 
 ## Notes & Tips
 
-* **Config files** are stored in the OS config directory:
-  `~/.config/monoctl/`
-* **Data sources** are saved as YAML files in:
-  `~/.config/monoctl/data-sources/<type>/<name>.yaml`
+* **Config files** are stored in the OS config directory: `~/.config/monoctl/config.yml`
+* **Data sources** are saved as YAML files in: `~/.config/monoctl/data-sources/<type>/<name>.yml`
 * **Sheets** require a Google service account JSON file.
   * `--rows` accepts **2D JSON arrays** for inserting multiple rows.
   * `--data-source` pulls data directly from a saved data source (MongoDB, MariaDB, etc.).
@@ -82,6 +80,8 @@ monoctl config list --format "{{.}}"
 ### data-source
 
 Manage reusable data source definitions.
+
+> Allowed operators: `eq, ne, gt, gte, lt, lte, in, nin, regex, exists`.
 
 ```bash
 # Create a data source
