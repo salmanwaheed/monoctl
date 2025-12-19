@@ -21,7 +21,7 @@ It lets you define reusable data sources (MongoDB, SQL, etc.) and push their dat
 ### Install via binary
 
 ```bash
-sudo wget -O /usr/local/bin/monoctl https://github.com/salmanwaheed/monoctl/releases/download/v0.1/monoctl-linux-x86_64
+sudo wget -O /usr/local/bin/monoctl https://github.com/salmanwaheed/monoctl/releases/download/v0.2/monoctl-linux-x86_64
 sudo chmod +x /usr/local/bin/monoctl
 
 # verify installation
