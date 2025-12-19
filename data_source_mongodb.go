@@ -10,10 +10,11 @@ import (
   "go.mongodb.org/mongo-driver/bson"
   "go.mongodb.org/mongo-driver/mongo"
   "go.mongodb.org/mongo-driver/mongo/options"
+  "go.mongodb.org/mongo-driver/mongo/readpref"
   "go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
-const mongoTimeout time.Duration = 10 * time.Second
+const mongoTimeout time.Duration = 30 * time.Second
 
 type MongoDB struct {
   Uri string
@@ -39,13 +40,14 @@ func (m *MongoDB) connect() (*mongo.Client, error) {
   ctx, cancel := context.WithTimeout(ctxbg, mongoTimeout)
   defer cancel()
 
-  client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.Uri))
+  opts := options.Client().ApplyURI(m.Uri).SetMinPoolSize(5).SetMaxPoolSize(100)
+  client, err := mongo.Connect(ctx, opts)
   if err != nil {
     return nil, fmt.Errorf("unable to connect: %w", err)
   }
   // defer client.Disconnect(ctx)
 
-  if err := client.Ping(ctx, nil); err != nil {
+  if err := client.Ping(ctx, readpref.Primary()); err != nil {
     _ = client.Disconnect(ctx)
     return nil, fmt.Errorf("unable to ping: %w", err)
   }
