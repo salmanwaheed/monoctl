@@ -228,6 +228,13 @@ func (f *filter) ToBSON() (bson.M, error) {
             return nil, fmt.Errorf("unsupported operator %q for field %q", op, field)
           }
 
+          // convert "2025-12-19T00:00:00+04:00" as string to time.Time
+          if s, ok := val.(string); ok {
+            if t, err := time.Parse(time.RFC3339, s); err == nil {
+              val = t
+            }
+          }
+
           opMap["$"+op] = val
         }
 
