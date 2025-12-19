@@ -1,7 +1,7 @@
-Version := $(shell git describe --tags --abbrev=0)
+VERSION := $(shell git describe --tags --abbrev=0)
 GIT_COMMIT := $(shell git rev-parse --short HEAD)
 GO_VERSION := $(shell go version | awk '{print $$3}')
-OS := $(shell uname --kernel-name)
+OS := $(shell uname --kernel-name | tr 'A-Z' 'a-z')
 ARCH := $(shell uname --machine)
 
 rm:
@@ -15,4 +15,4 @@ build: rm
 		-X 'github.com/salmanwaheed/monoctl.BuildInfo.GoVersion=$(GO_VERSION)' \
 		-X 'github.com/salmanwaheed/monoctl.BuildInfo.OS=$(OS)' \
 		-X 'github.com/salmanwaheed/monoctl.BuildInfo.Arch=$(ARCH)'" \
-		-o ./bin/monoctl ./cmd/monoctl/main.go
+		-o ./bin/monoctl-$(OS)-$(ARCH) ./cmd/monoctl/main.go
