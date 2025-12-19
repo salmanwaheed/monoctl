@@ -52,8 +52,8 @@ func init() {
   // create flags required
   dsCreateCmd.MarkFlagRequired("uri")
   dsCreateCmd.MarkFlagRequired("table")
-  dsCreateCmd.MarkFlagRequired("fields")
-  dsCreateCmd.MarkFlagRequired("query")
+  dsCreateCmd.MarkFlagRequired("filter")
+  dsCreateCmd.MarkFlagRequired("select")
 
   // view flags
   dsViewCmd.Flags().BoolVar(&ds.DryRun, "dry-run", false, "Execute & preview data")
